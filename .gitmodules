@@ -1,0 +1,3 @@
+[submodule "cython_tste"]
+	path = cython_tste
+	url = https://github.com/kmundnic/cython_tste.git
