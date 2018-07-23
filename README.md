@@ -1,2 +1,2 @@
 # Julia implementation of tSTE
-This is a Julia implementation of t-Student Stochastic Triplet Embeddings (tSTE), based on Michael Wilber's implementation of [tSTE in Cython](www.github.com/gcr/cy_tste).
+This is a Julia implementation of t-Student Stochastic Triplet Embeddings (tSTE), based on Michael Wilber's implementation of [tSTE in Cython](www.github.com/gcr/cython_tste).
