@@ -1,0 +1,2 @@
+src/test*.jl
+src/.ipynb_checkpoints/*
