@@ -260,7 +260,7 @@ function flip_triplets!(triplets::Array{Int64,2}, amount::Int64)
 	end
 end
 
-function scale(data::Array{Float64,1}, X::Array{Float64,1})
+function scale(data::Array{Float64,1}, X::Array{Float64,1}; MSE::Bool=false)
     # We solve the scaling problem by min || aX - data - b||^2,
     # where (a,b) are the scale and offset parameters
     @assert size(data) == size(X)
