@@ -27,6 +27,23 @@ function createtoydata(n1::Int64, n2::Int64)
 
 end
 
+function unique_triplets(n::Int64)
+    @assert n > 2
+    
+    triplets = zeros(Int64, n*binomial(n-1, 2), 3)
+    counter = 0
+
+
+    for k = 1:n, j = 1:k-1, i = 1:n
+        if i != j && i != k
+            counter += 1
+            triplets[counter,:] = [i,j,k]
+        end
+    end
+
+    return triplets
+end
+
 function label(data::Array{Float64,1}; probability_success::Array{Float64,3}=ones(size(data,1),size(data,1),size(data,1))) 
     label(reshape(data, size(data,1), 1), probability_success=probability_success)
 end
