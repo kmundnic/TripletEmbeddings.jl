@@ -267,18 +267,11 @@ function scale(data::Array{Float64,1}, X::Array{Float64,1}; MSE::Bool=false)
 
     a, b = [X -ones(size(X))]\data
 
-    return a*X - b, norm(a*X - b - data)^2
-end
-
-function scale!(data::Array{Float64,1}, X::Array{Float64,1})
-    # We solve the scaling problem by min || aX - data - b||^2,
-    # where (a,b) are the scale and offset parameters
-    @assert size(data) == size(X)
-
-    n::Int64 = size(X,1)
-    a, b = [X -ones(size(X))]\Y
-
-    X = a*X - b
+    if MSE
+        return a*X - b, norm(a*X - b - data)^2
+    else
+        return a*X - b
+    end
 end
 
 function procrustes(X::Array{Float64,2}, Y::Array{Float64,2}; doReflection=true)
