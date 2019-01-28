@@ -316,7 +316,7 @@ function scale(data::Array{Int64,1}, X::Array{Float64,1})
 
     a, b = [X -ones(size(X))]\data
 
-    return a*X - b
+    return a*X .- b
 
 end
 
