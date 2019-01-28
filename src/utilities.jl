@@ -1,8 +1,12 @@
 # include("ndgrid.jl")
+using Random
+using Statistics
+using LinearAlgebra
+using DelimitedFiles
 
 function load_data(;path::String = "../data/gt_objective.csv", slice::Int64=30)::Array{Float64,1}
 	
-	data = squeeze(readdlm(path), 2)
+	data = dropdims(readdlm(path), dims=2)
 	
 	if slice < size(data, 1)
 		data = data[1:slice:end] # downsampling

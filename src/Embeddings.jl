@@ -1,5 +1,9 @@
 module Embeddings
 
+	using Printf
+	using LinearAlgebra
+	
+
     include("utilities.jl")
 
     function tSTE(triplets::Array{Int64,2}, 
@@ -12,7 +16,7 @@ module Embeddings
                   project::Bool = true,
                   projection_steps::Int64 = 10,
                   debug::Bool = false,
-                  X0 = Array{Float64,2}(0,0))
+                  X0 = Array{Float64,2}(undef,0,0))
 
         no_objects::Int64 = maximum(triplets)
         no_triplets::Int64 = size(triplets, 1)
@@ -20,7 +24,7 @@ module Embeddings
         @assert no_dims >= 1
         @assert α > 1
         @assert λ >= 0
-        @assert isempty(find(x -> x < 1, triplets))
+        @assert isempty(findall(x -> x < 1, triplets))
         @assert max_iter >= 10
 
         # Initial embedding 
@@ -121,7 +125,7 @@ module Embeddings
                    no_triplets::Int64,
                    triplets::Array{Int64,2},
                    λ::Real,
-                   α::Real)::Tuple{Float64,Array{Float64,2}}
+                   α::Real)
 
         P::Float64 = 0.0
         C::Float64 = 0.0 + λ * sum(X.^2) # Initialize cost including l2 regularization cost
@@ -186,7 +190,7 @@ module Embeddings
 
     function partition_work(no_triplets::Int64, nthreads::Int64)
         
-        ls = linspace(1, no_triplets, nthreads+1)
+        ls = range(1, stop=no_triplets, length=nthreads+1)
         
         map(1:nthreads) do i
             a = round(Int64, ls[i])
