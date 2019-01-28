@@ -13,8 +13,6 @@ module Embeddings
                   use_log::Bool = true,
                   verbose::Bool = true,
                   max_iter::Int64 = 1000,
-                  project::Bool = true,
-                  projection_steps::Int64 = 10,
                   debug::Bool = false,
                   X0 = Array{Float64,2}(undef,0,0))
 
@@ -62,21 +60,6 @@ module Embeddings
             C, ∇C = ∇tSTE(X, no_objects, no_dims, no_triplets, triplets, λ, α)
 
             X = X - (η / no_triplets * no_objects) * ∇C
-
-            if project && no_dims == 1
-                # Project into low pass signal by using a median filter
-                # TODO: Create projection function for more than no_dims > 1 dimension
-                if no_iterations < projection_steps
-                    # We use a strong median filter whose window size is reduced with every iteration,
-                    # with a minimum window size of 3
-                    # This has two advantages:
-                    # 1. Forcing the solution to a kind of signal we expect
-                    # 2. Shifts in the phase of the signal only in the first no_iterations,
-                    #    when the median filter is used
-                    window_size::Int64 = 2 + projection_steps - no_iterations # window_size >= 3
-                    X = medianfilter(X, window_size = window_size)
-                end
-            end
 
             if C < best_C
                 best_C = C
@@ -253,21 +236,6 @@ module Embeddings
                       α)
 
         return C, ∇C
-    end
-
-    # TODO: Median filter for more than one dimension
-    function medianfilter(data::Array{Float64,2}; window_size = 3::Int64)
-        @assert window_size > 2
-
-        filtered = zeros(Float64, size(data))
-
-        pre_window = floor(Int64, window_size/2)
-       
-        for i in pre_window:size(data,1) - pre_window
-            filtered[i] = median(data[i - pre_window + 1: i + pre_window])
-        end
-        
-        return filtered
     end
 
 end # module
