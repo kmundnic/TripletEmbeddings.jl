@@ -1,77 +1,82 @@
-function compute(te::TripletEmbedding;
-              use_log::Bool = true,
-              verbose::Bool = true,
-              max_iter::Int64 = 1000,
-              debug::Bool = false)
+struct tSTE <: TripletEmbedding
+    triplets::Array{Int64,2}
+    dimensions::Int64
+    params::Dict{Symbol,Real}
+    X::Embedding
+    no_triplets::Int64
+    no_items::Int64
 
-    @assert max_iter >= 10
 
-    C::Float64 = Inf                                # Cost
-    ∇C = zeros(Float64, te.no_items, te.dimensions) # Gradient
+    function tSTE(
+        triplets::Array{Int64,2},
+        dimensions::Int64,
+        params::Dict{Symbol,Real},
+        X::Embedding)
+        
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
+        
+        if size(triplets, 2) != 3
+            throw(ArgumentError("Triplets do not have three values"))
+        end
 
-    tolerance::Float64 = 1e-7 # convergence tolerance
-    η::Float64 = 2.0          # learning rate
-    best_C::Float64 = Inf     # best error obtained so far
-    best_X = te.X.X           # best embedding found so far
+        if sort(unique(triplets)) != 1:n
+            throw(ArgumentError("Triplet values must have all elements in the range 1:no_items"))
+        end         
+
+        if dimensions < 1
+            throw(ArgumentError("Dimensions must be >= 1"))
+        end
     
-    if debug
-        iteration_Xs = zeros(Float64, te.no_items, te.dimensions, max_iter)
+        if no_items != size(X.X, 1)
+            throw(ArgumentError("Number of elements in triplets does not match the embedding dimension"))
+        end
+
+        if size(X.X, 2) != dimensions
+            throw(ArgumentError("dimensions and embedding dimensions do not match"))
+        end
+
+        if !haskey(params, :α)
+            throw(ArgumentError("params has no key :α"))
+        elseif params[:α] <= 1
+            throw(ArgumentError("Parameter α must be > 1"))
+        end
+
+        if !haskey(params, :λ)
+            throw(ArgumentError("params has no key :λ"))
+        elseif params[:λ] < 0
+            throw(ArgumentError("Regularizer λ must be >= 0"))
+        end
+
+        new(triplets, dimensions, params, X, no_triplets, no_items)
     end
 
-    # Perform main iterations
-    no_iterations::Int64 = 0
-    no_increments::Int64 = 0
-    percent_violations::Float64 = 0.0
-    violations = zeros(Bool, te.no_items, )
+    function tSTE(
+        triplets::Array{Int64,2},
+        dimensions::Int64,
+        params::Dict{Symbol,Real})
 
-    while no_iterations < max_iter && no_increments < 5
-        no_iterations += 1
-        old_C = C
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
 
-        # Calculate gradient descent and cost
-        C, ∇C = ∇tSTE(te)
-
-        te.X.X = te.X.X - (η / te.no_triplets * te.no_items) * ∇C
-
-        if C < best_C
-            best_C = C
-            best_X = te.X.X
-        end
-
-        # Save each iteration if indicated
-        if debug
-            iteration_Xs[:,:,no_iterations] = te.X.X
-        end
-
-        # Update learning rate
-        if old_C > C + tolerance
-            no_increments = 0
-            η *= 1.01
-        else
-            no_increments += 1
-            η *= 0.5
-        end
-
-        # Print out progress
-        if verbose && (no_iterations % 10 == 0)
-            violations, percent_violations = triplet_violations(te)
-            @printf("iter # = %d, cost = %.2f, violations = %.2f %%\n", no_iterations, C, 100*percent_violations)
-        end
+        X0 = Embedding(randn(maximum(triplets), dimensions))
+        new(triplets, dimensions, params, X0, no_triplets, no_items)
     end
 
-    if !verbose
-        _, percent_violations = triplet_violations(te, no_triplets=te.no_triplets, no_items=te.no_items, dimensions=te.dimensions)
-    end
+    function tSTE(
+        triplets::Array{Int64,2},
+        params::Dict{Symbol,Real},
+        X::Embedding)
 
-    if debug
-        return iteration_Xs[:,:,1:no_iterations], percent_violations
-    else
-        te.X.X = best_X
-        return te, percent_violations
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
+
+        dimensions = size(X,2)
+        new(triplets, dimensions, params, X, no_triplets, no_items)
     end
 end
 
-function ∇tSTE(te::tSTE)
+function gradient(te::tSTE)
 
     P::Float64 = 0.0
     C::Float64 = 0.0 + te.params[:λ] * sum(te.X.X.^2) # Initialize cost including l2 regularization cost
@@ -116,7 +121,7 @@ function ∇tSTE(te::tSTE)
     ∇Cs = [zeros(Float64, te.no_items, te.dimensions) for _ = 1:nthreads]
     
     Threads.@threads for tid in 1:nthreads
-        Cs[tid] = tSTE_thread_kernel(work_ranges[tid], te, K, Q, ∇Cs[tid], constant,)
+        Cs[tid] = thread_kernel(te, K, Q, ∇Cs[tid], constant, work_ranges[tid])
     end
 
     C += sum(Cs)
@@ -134,12 +139,13 @@ function ∇tSTE(te::tSTE)
     return C, ∇C
 end
 
-function tSTE_thread_kernel(triplets_range::UnitRange{Int64},
-                            te::tSTE,
-                            K::Array{Float64,2},
-                            Q::Array{Float64,2},
-                            ∇C::Array{Float64,2},
-                            constant::Float64)
+function thread_kernel(te::tSTE,
+                        K::Array{Float64,2},
+                        Q::Array{Float64,2},
+                        ∇C::Array{Float64,2},
+                        constant::Float64,
+                        triplets_range::UnitRange{Int64})
+
     C::Float64 = 0.0
     
     for t in triplets_range
@@ -164,7 +170,7 @@ function tSTE_thread_kernel(triplets_range::UnitRange{Int64},
     return C
 end
 
-# function ∇tSTE(X::Array{Float64,1}, 
+# function gradient(X::Array{Float64,1}, 
 #                te.no_items::Int64,
 #                te.dimensions::Int64,
 #                no_triplets::Int64,
@@ -174,7 +180,7 @@ end
 
 #     @assert te.dimensions == 1
 
-#     C, ∇C = ∇tSTE(reshape(X, size(X,1), 1),
+#     C, ∇C = gradient(reshape(X, size(X,1), 1),
 #                   te.no_items,
 #                   te.dimensions,
 #                   no_triplets,
