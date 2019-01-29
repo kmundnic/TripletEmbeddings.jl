@@ -245,32 +245,28 @@ function distances(X::Array{Int64,1}; no_objects::Int64=length(X))::Array{Int64,
     return D + D'
 end
 
-function triplet_violations(X::Array{Float64,2},
-                            triplets::Array{Int64,2};
-                            no_triplets = size(triplets,1)::Int64,
-                            no_objects = maximum(triplets)::Int64,
-                            no_dims = size(X,2)::Int64)
+function triplet_violations(te::TripletEmbedding)
     "This function is more exact in floating point operations than 
     triplet_violations, but it is a bit slower and uses double the memory"
 
-    D = zeros(Float64, no_objects, no_objects)
+    D = zeros(Float64, te.no_items, te.no_items)
 
-    for j = 1:no_objects, i = j:no_objects
-        @inbounds D[i,j] = norm(X[i,:] - X[j,:])
+    for j = 1:te.no_items, i = j:te.no_items
+        @inbounds D[i,j] = norm(te.X.X[i,:] - te.X.X[j,:])
     end
 
     D =  D + D'
 
     no_viol::Int64 = 0
-    violations = zeros(Bool, no_triplets, )
+    violations = zeros(Bool, te.no_triplets, )
 
-    for t = 1:no_triplets
-        violations[t] = D[triplets[t,1], triplets[t,2]] > D[triplets[t,1], triplets[t,3]]
+    for t = 1:te.no_triplets
+        violations[t] = D[te.triplets[t,1], te.triplets[t,2]] > D[te.triplets[t,1], te.triplets[t,3]]
     end
     
     no_viol = reduce(+, violations)
 
-    return violations, no_viol/no_triplets
+    return violations, no_viol/te.no_triplets
 end
 
 function correct_triplets(X::Array{Float64,2}, triplets::Array{Int64,2})

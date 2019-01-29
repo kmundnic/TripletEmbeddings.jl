@@ -19,6 +19,9 @@ module Embeddings
     	dimensions::Int64
     	params::Dict{Symbol,Real}
     	X::Embedding
+    	no_triplets::Int64
+    	no_items::Int64
+
 
     	function tSTE(
     		triplets::Array{Int64,2},
@@ -26,21 +29,22 @@ module Embeddings
     		params::Dict{Symbol,Real},
     		X::Embedding)
     		
-    		n::Int64 = maximum(triplets)
+    		no_triplets::Int64 = size(triplets,1)
+    		no_items::Int64 = maximum(triplets)
     		
 			if size(triplets, 2) != 3
 				throw(ArgumentError("Triplets do not have three values"))
 			end
 
     		if sort(unique(triplets)) != 1:n
-    			throw(ArgumentError("Triplet values must have all elements in the range 1:n (with n being the total number of elements)"))
+    			throw(ArgumentError("Triplet values must have all elements in the range 1:no_items"))
     		end    		
 
     		if dimensions < 1
     			throw(ArgumentError("Dimensions must be >= 1"))
     		end
     	
-			if n != size(X.X, 1)
+			if no_items != size(X.X, 1)
 				throw(ArgumentError("Number of elements in triplets does not match the embedding dimension"))
 			end
 
@@ -60,7 +64,7 @@ module Embeddings
 				throw(ArgumentError("Regularizer λ must be >= 0"))
 			end
 
-    		new(triplets, dimensions, params, X)
+    		new(triplets, dimensions, params, X, no_triplets, no_items)
     	end
 
     	function tSTE(
@@ -68,8 +72,11 @@ module Embeddings
     		dimensions::Int64,
     		params::Dict{Symbol,Real})
 
+    	    no_triplets::Int64 = size(triplets,1)
+    		no_items::Int64 = maximum(triplets)
+
     		X0 = Embedding(randn(maximum(triplets), dimensions))
-    		new(triplets, dimensions, params, Embedding(X0))
+    		new(triplets, dimensions, params, X0, no_triplets, no_items)
     	end
 
     	function tSTE(
@@ -77,8 +84,11 @@ module Embeddings
     		params::Dict{Symbol,Real},
     		X::Embedding)
 
+    		no_triplets::Int64 = size(triplets,1)
+    		no_items::Int64 = maximum(triplets)
+
     		dimensions = size(X,2)
-    		new(triplets, dimensions, params, X)
+    		new(triplets, dimensions, params, X, no_triplets, no_items)
     	end
     end
 
