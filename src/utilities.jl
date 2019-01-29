@@ -1,9 +1,3 @@
-# include("ndgrid.jl")
-using Random
-using Statistics
-using LinearAlgebra
-using DelimitedFiles
-
 function load_data(;path::String = "../data/gt_objective.csv", slice::Int64=30)::Array{Float64,1}
 	
 	data = dropdims(readdlm(path), dims=2)
@@ -206,8 +200,6 @@ function S_to_triplets(S::Array{Array{Int64,1},1})
 	return triplets
 end
 
-# A = A[[1, 3:end], :]
-
 function subset(triplets::Array{Int64,2}, fraction::Real)
         @assert !isempty(triplets) # Check for no triplets
 
@@ -328,9 +320,9 @@ function scale(data::Array{Float64,1}, X::Array{Float64,1}; MSE::Bool=false)
     a, b = [X -ones(size(X))]\data
 
     if MSE
-        return a*X - b, norm(a*X - b - data)^2
+        return a*X .- b, norm(a*X - b - data)^2
     else
-        return a*X - b
+        return a*X .- b
     end
 end
 
