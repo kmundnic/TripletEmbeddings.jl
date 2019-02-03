@@ -249,19 +249,19 @@ function triplet_violations(te::TripletEmbedding)
     "This function is more exact in floating point operations than 
     triplet_violations, but it is a bit slower and uses double the memory"
 
-    D = zeros(Float64, te.no_items, te.no_items)
+    D = zeros(Float64, no_items(te), no_items(te))
 
-    for j = 1:te.no_items, i = j:te.no_items
-        @inbounds D[i,j] = norm(te.X.X[i,:] - te.X.X[j,:])
+    for j = 1:no_items(te), i = j:no_items(te)
+        @inbounds D[i,j] = norm(X(te)[i,:] - X(te)[j,:])
     end
 
     D =  D + D'
 
     no_viol::Int64 = 0
-    violations = zeros(Bool, te.no_triplets, )
+    violations = zeros(Bool, no_triplets(te), )
 
-    for t = 1:te.no_triplets
-        violations[t] = D[te.triplets[t,1], te.triplets[t,2]] > D[te.triplets[t,1], te.triplets[t,3]]
+    for t = 1:no_triplets(te)
+        violations[t] = D[triplets(te)[t,1], triplets(te)[t,2]] > D[triplets(te)[t,1], triplets(te)[t,3]]
     end
     
     no_viol = reduce(+, violations)

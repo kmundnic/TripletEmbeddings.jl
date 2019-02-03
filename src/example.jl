@@ -1,5 +1,6 @@
 using Random
-using Plots; pyplot()
+# using Plots; pyplot()
+using BenchmarkTools
 include("Embeddings.jl")
 
 Random.seed!(4)
