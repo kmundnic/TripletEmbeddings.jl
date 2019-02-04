@@ -1,10 +1,19 @@
+@def check_tste_params begin
+    if !haskey(params, :α)
+        throw(ArgumentError("params has no key :α"))
+    elseif params[:α] <= 1
+        throw(ArgumentError("Parameter α must be > 1"))
+    end
+
+    if !haskey(params, :λ)
+        throw(ArgumentError("params has no key :λ"))
+    elseif params[:λ] < 0
+        throw(ArgumentError("Regularizer λ must be >= 0"))
+    end
+end
+
 struct tSTE <: TripletEmbedding
-    triplets::Array{Int64,2}
-    dimensions::Int64
-    params::Dict{Symbol,Real}
-    X::Embedding
-    no_triplets::Int64
-    no_items::Int64
+    @add_embedding_fields
 
     function tSTE(
         triplets::Array{Int64,2},
@@ -14,42 +23,17 @@ struct tSTE <: TripletEmbedding
         
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
+
+        @check_embedding_conditions
+        @check_tste_params
         
-        if size(triplets, 2) != 3
-            throw(ArgumentError("Triplets do not have three values"))
-        end
-
-        if sort(unique(triplets)) != 1:n
-            throw(ArgumentError("Triplet values must have all elements in the range 1:no_items"))
-        end         
-
-        if dimensions < 1
-            throw(ArgumentError("Dimensions must be >= 1"))
-        end
-    
-        if no_items != size(X.X, 1)
-            throw(ArgumentError("Number of elements in triplets does not match the embedding dimension"))
-        end
-
-        if size(X.X, 2) != dimensions
-            throw(ArgumentError("dimensions and embedding dimensions do not match"))
-        end
-
-        if !haskey(params, :α)
-            throw(ArgumentError("params has no key :α"))
-        elseif params[:α] <= 1
-            throw(ArgumentError("Parameter α must be > 1"))
-        end
-
-        if !haskey(params, :λ)
-            throw(ArgumentError("params has no key :λ"))
-        elseif params[:λ] < 0
-            throw(ArgumentError("Regularizer λ must be >= 0"))
-        end
-
         new(triplets, dimensions, params, X, no_triplets, no_items)
     end
 
+    """
+    Constructor that initializes with a random (normal)
+    embedding.
+    """
     function tSTE(
         triplets::Array{Int64,2},
         dimensions::Int64,
@@ -58,10 +42,21 @@ struct tSTE <: TripletEmbedding
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
 
-        X0 = Embedding(randn(maximum(triplets), dimensions))
-        new(triplets, dimensions, params, X0, no_triplets, no_items)
+        if dimensions > 0
+            X = Embedding(randn(maximum(triplets), dimensions))
+        else
+            throw(ArgumentError("Dimensions must be >= 1"))
+        end
+
+        @check_embedding_conditions
+        @check_tste_params
+
+        new(triplets, dimensions, params, X, no_triplets, no_items)
     end
 
+    """
+    Constructor that takes an initial condition.
+    """
     function tSTE(
         triplets::Array{Int64,2},
         params::Dict{Symbol,Real},
@@ -69,16 +64,27 @@ struct tSTE <: TripletEmbedding
 
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
-
         dimensions = size(X,2)
+
+        @check_embedding_conditions
+        @check_tste_params
+
         new(triplets, dimensions, params, X, no_triplets, no_items)
     end
+end
+
+function α(te::tSTE)
+    return te.params[:α]
+end
+
+function λ(te::tSTE)
+    return te.params[:λ]
 end
 
 function gradient(te::tSTE)
 
     P::Float64 = 0.0
-    C::Float64 = 0.0 + te.params[:λ] * sum(X(te).^2) # Initialize cost including l2 regularization cost
+    C::Float64 = 0.0 + λ(te) * sum(X(te).^2) # Initialize cost including l2 regularization cost
 
     sum_X = zeros(Float64, no_items(te), )
     K = zeros(Float64, no_items(te), no_items(te))
@@ -86,7 +92,7 @@ function gradient(te::tSTE)
 
     A_to_B::Float64 = 0.0
     A_to_C::Float64 = 0.0
-    constant::Float64 = (te.params[:α] + 1) / te.params[:α]
+    constant::Float64 = (α(te) + 1) / α(te)
 
     triplets_A::Int64 = 0
     triplets_B::Int64 = 0
@@ -94,21 +100,21 @@ function gradient(te::tSTE)
 
     # Compute t-Student kernel for each point
     # i,j range over points; k ranges over dims
-    for k in 1:te.dimensions, i in 1:no_items(te)
+    for k in 1:dimensions(te), i in 1:no_items(te)
         @inbounds sum_X[i] += X(te)[i, k] * X(te)[i, k] # Squared norm
     end
 
     for j in 1:no_items(te), i in 1:no_items(te)
         @inbounds K[i,j] = sum_X[i] + sum_X[j]
-        for k in 1:te.dimensions
+        for k in 1:dimensions(te)
             # K[i,j] = ((sqdist(i,j)/α + 1)) ^ (-(α+1)/2),
             # which is exactly the numerator of p_{i,j} in the lower right of
             # t-STE paper page 3.
             # The proof follows because sqdist(a,b) = (a-b)(a-b) = a^2+b^2-2ab
             @inbounds K[i,j] += -2 * X(te)[i,k] * X(te)[j,k]
         end
-        @inbounds Q[i,j] = (1 + K[i,j] / te.params[:α]) ^ -1
-        @inbounds K[i,j] = (1 + K[i,j] / te.params[:α]) ^ ((te.params[:α] + 1) / -2)
+        @inbounds Q[i,j] = (1 + K[i,j] / α(te)) ^ -1
+        @inbounds K[i,j] = (1 + K[i,j] / α(te)) ^ ((α(te) + 1) / -2)
     end
 
     # Compute probability (or log-prob) for each triplet
@@ -117,7 +123,7 @@ function gradient(te::tSTE)
 
     # Define costs and gradients for each thread
     Cs = zeros(Float64, nthreads, )
-    ∇Cs = [zeros(Float64, no_items(te), te.dimensions) for _ = 1:nthreads]
+    ∇Cs = [zeros(Float64, no_items(te), dimensions(te)) for _ = 1:nthreads]
     
     Threads.@threads for tid in 1:nthreads
         Cs[tid] = thread_kernel(te, K, Q, ∇Cs[tid], constant, work_ranges[tid])
@@ -130,9 +136,9 @@ function gradient(te::tSTE)
         ∇C .+= ∇Cs[i]
     end
 
-    for i in 1:te.dimensions, n in 1:no_items(te)
+    for i in 1:dimensions(te), n in 1:no_items(te)
         # The 2λX is for regularization: derivative of L2 norm
-        @inbounds ∇C[n,i] = - ∇C[n, i] + 2*te.params[:λ] * X(te)[n, i]
+        @inbounds ∇C[n,i] = - ∇C[n, i] + 2*λ(te) * X(te)[n, i]
     end
 
     return C, ∇C
@@ -156,7 +162,7 @@ function thread_kernel(te::tSTE,
         @inbounds P = K[triplets_A, triplets_B] / (K[triplets_A, triplets_B] + K[triplets_A, triplets_C])
         C += -log(P)
 
-        for i in 1:te.dimensions
+        for i in 1:dimensions(te)
             # Calculate the gradient of *this triplet* on its points.
             @inbounds A_to_B = ((1 - P) * Q[triplets_A, triplets_B] * (X(te)[triplets_A, i] - X(te)[triplets_B, i]))
             @inbounds A_to_C = ((1 - P) * Q[triplets_A, triplets_C] * (X(te)[triplets_A, i] - X(te)[triplets_C, i]))
@@ -170,18 +176,18 @@ function thread_kernel(te::tSTE,
 end
 
 # function gradient(X::Array{Float64,1}, 
-#                no_items(te)::Int64,
-#                te.dimensions::Int64,
+#                no_items::Int64,
+#                dimensions::Int64,
 #                no_triplets::Int64,
 #                triplets::Array{Int64,2},
 #                λ::Real,
 #                α::Real)::Tuple{Float64,Array{Float64,2}}
 
-#     @assert te.dimensions == 1
+#     @assert dimensions(te) == 1
 
 #     C, ∇C = gradient(reshape(X, size(X,1), 1),
-#                   no_items(te),
-#                   te.dimensions,
+#                   no_items,
+#                   dimensions,
 #                   no_triplets,
 #                   triplets,
 #                   λ,
