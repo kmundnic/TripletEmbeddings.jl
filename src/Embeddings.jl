@@ -1,12 +1,14 @@
 module Embeddings
 
-	using Printf
+    using Printf
 	using Random
 	using Statistics
 	using LinearAlgebra
 	using DelimitedFiles
+	using Base.Threads
 
-	export tSTE, Embedding
+	# For debugging
+	const printlock = SpinLock()
 
 	abstract type TripletEmbedding end
 	
@@ -88,5 +90,6 @@ module Embeddings
     include("utilities.jl")
     include("compute.jl")
     include("tSTE.jl")
+    include("STE.jl")
 
 end # module
