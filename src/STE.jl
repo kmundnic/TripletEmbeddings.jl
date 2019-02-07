@@ -4,12 +4,6 @@
     elseif params[:σ] <= 0
         throw(ArgumentError("Parameter :σ must be > 1"))
     end
-
-    if !haskey(params, :λ)
-        throw(ArgumentError("params has no key :λ"))
-    elseif params[:λ] < 0
-        throw(ArgumentError("Regularizer λ must be >= 0"))
-    end
 end
 
 struct STE <: TripletEmbedding
@@ -77,35 +71,10 @@ function σ(te::STE)
     return te.params[:σ]
 end
 
-function λ(te::STE)
-    return te.params[:λ]
-end
-
-function kernel(te::STE)
-    constant = 1/σ(te)^2
-    sum_X = zeros(Float64, no_items(te), )
-    K = zeros(Float64, no_items(te), no_items(te))
-
-    # Compute normal density kernel for each point
-    # i,j range over points; k ranges over dimensions
-    for k in 1:dimensions(te), i in 1:no_items(te)
-        @inbounds sum_X[i] += X(te)[i,k] * X(te)[i,k]
-    end
-
-    for j in 1:no_items(te), i in 1:no_items(te)
-        @inbounds K[i,j] = sum_X[i] + sum_X[j]
-        for k in 1:dimensions(te)
-            @inbounds K[i,j] += -2 * X(te)[i,k] * X(te)[j,k]
-        end
-        @inbounds K[i,j] = exp( -constant * K[i,j])
-    end
-    return K
-end
-
 function gradient(te::STE)
 
 	P::Float64 = 0.0
-	C::Float64 = 0.0 + λ(te) * sum(X(te).^2) # Initialize cost including l2 regularization cost
+	C::Float64 = 0.0
     constant = 1/σ(te)^2
 
 	sum_X = zeros(Float64, no_items(te), )
@@ -125,8 +94,7 @@ function gradient(te::STE)
 		@inbounds K[i,j] = exp( -constant * K[i,j] / 2)
 	end
 
-	# nthreads::Int64 = Threads.nthreads()
-    nthreads::Int64 = 1
+	nthreads::Int64 = Threads.nthreads()
 	work_ranges = partition_work(no_triplets(te), nthreads)
 
 	# Define costs and gradient vectors for each thread
@@ -144,12 +112,10 @@ function gradient(te::STE)
 		∇C .+= ∇Cs[i]
 	end
 
-	for i in 1:dimensions(te), n in 1:no_items(te)
-		# The 2λX is for regularization: derivative of L2 norm
-		@inbounds ∇C[n,i] = - ∇C[n, i] + 2λ(te) * X(te)[n, i]
+    for i in 1:dimensions(te), n in 1:no_items(te)
+		@inbounds ∇C[n,i] = - ∇C[n, i]
 	end
 
-    println(C)
 	return C, ∇C
 end
 

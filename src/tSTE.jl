@@ -4,12 +4,6 @@
     elseif params[:α] <= 1
         throw(ArgumentError("Parameter α must be > 1"))
     end
-
-    if !haskey(params, :λ)
-        throw(ArgumentError("params has no key :λ"))
-    elseif params[:λ] < 0
-        throw(ArgumentError("Regularizer λ must be >= 0"))
-    end
 end
 
 struct tSTE <: TripletEmbedding
@@ -77,14 +71,10 @@ function α(te::tSTE)
     return te.params[:α]
 end
 
-function λ(te::tSTE)
-    return te.params[:λ]
-end
-
 function gradient(te::tSTE)
 
     P::Float64 = 0.0
-    C::Float64 = 0.0 + λ(te) * sum(X(te).^2) # Initialize cost including l2 regularization cost
+    C::Float64 = 0.0
 
     sum_X = zeros(Float64, no_items(te), )
     K = zeros(Float64, no_items(te), no_items(te))
@@ -130,11 +120,9 @@ function gradient(te::tSTE)
     end
 
     for i in 1:dimensions(te), n in 1:no_items(te)
-        # The 2λX is for regularization: derivative of L2 norm
-        @inbounds ∇C[n,i] = - ∇C[n, i] + 2*λ(te) * X(te)[n, i]
+        @inbounds ∇C[n,i] = - ∇C[n, i]
     end
 
-    println(C)
     return C, ∇C
 end
 
