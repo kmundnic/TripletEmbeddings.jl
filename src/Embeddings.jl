@@ -7,9 +7,6 @@ module Embeddings
 	using DelimitedFiles
 	using Base.Threads
 
-	# For debugging
-	const printlock = SpinLock()
-
 	abstract type TripletEmbedding end
 	
 	"""
@@ -36,6 +33,10 @@ module Embeddings
 		end
 	end
 
+	"""
+	We define a macro @add_embedding_fields with all common field
+	types for all possible embeddings
+	"""
 	@def add_embedding_fields begin
 	    triplets::Array{Int64,2}
 	    dimensions::Int64
@@ -45,6 +46,10 @@ module Embeddings
 	    no_items::Int64
 	end
 
+	"""
+	We define a macro @check_embedding_conditions with all common conditions
+	for fields of all possible embeddings
+	"""
 	@def check_embedding_conditions begin
         if size(triplets, 2) != 3
             throw(ArgumentError("Triplets do not have three values"))
