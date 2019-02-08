@@ -8,6 +8,7 @@ end
 
 struct STE <: TripletEmbedding
 	@add_embedding_fields
+    constant::Float64
 
 	function STE(
 		triplets::Array{Int64,2},
@@ -17,11 +18,12 @@ struct STE <: TripletEmbedding
 
 		no_triplets::Int64 = size(triplets,1)
 		no_items::Int64 = maximum(triplets)
+        constant = 1/params[:σ]^2
 
 		@check_embedding_conditions
 		@check_ste_params
 
-        new(triplets, dimensions, params, X, no_triplets, no_items)
+        new(triplets, dimensions, params, X, no_triplets, no_items, constant)
     end
 
     """
@@ -35,6 +37,7 @@ struct STE <: TripletEmbedding
 
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
+        constant = 1/params[:σ]^2
 
         if dimensions > 0
             X = Embedding(0.0001*randn(maximum(triplets), dimensions))
@@ -45,7 +48,7 @@ struct STE <: TripletEmbedding
         @check_embedding_conditions
         @check_ste_params
 
-        new(triplets, dimensions, params, X, no_triplets, no_items)
+        new(triplets, dimensions, params, X, no_triplets, no_items, constant)
     end
 
     """
@@ -59,11 +62,12 @@ struct STE <: TripletEmbedding
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
         dimensions = size(X,2)
+        constant = 1/params[:σ]^2
 
         @check_embedding_conditions
         @check_ste_params
 
-        new(triplets, dimensions, params, X, no_triplets, no_items)
+        new(triplets, dimensions, params, X, no_triplets, no_items, constant)
     end
 end
 
@@ -71,28 +75,32 @@ function σ(te::STE)
     return te.params[:σ]
 end
 
+function kernel(te::STE)
+    sum_X = zeros(Float64, no_items(te), )
+    K = zeros(Float64, no_items(te), no_items(te))
+
+    # Compute normal density kernel for each point
+    # i,j range over points; k ranges over dimensions
+    for k in 1:dimensions(te), i in 1:no_items(te)
+        @inbounds sum_X[i] += X(te)[i,k] * X(te)[i,k]
+    end
+
+    for j in 1:no_items(te), i in 1:no_items(te)
+        @inbounds K[i,j] = sum_X[i] + sum_X[j]
+        for k in 1:dimensions(te)
+            @inbounds K[i,j] += -2 * X(te)[i,k] * X(te)[j,k]
+        end
+        @inbounds K[i,j] = exp( -te.constant * K[i,j] / 2)
+    end
+    return K
+end
+
 function gradient(te::STE)
 
 	P::Float64 = 0.0
 	C::Float64 = 0.0
-    constant = 1/σ(te)^2
 
-	sum_X = zeros(Float64, no_items(te), )
-	K = zeros(Float64, no_items(te), no_items(te))
-
-	# Compute normal density kernel for each point
-	# i,j range over points; k ranges over dimensions
-	for k in 1:dimensions(te), i in 1:no_items(te)
-		@inbounds sum_X[i] += X(te)[i,k] * X(te)[i,k]
-	end
-
-	for j in 1:no_items(te), i in 1:no_items(te)
-		@inbounds K[i,j] = sum_X[i] + sum_X[j]
-		for k in 1:dimensions(te)
-			@inbounds K[i,j] += -2 * X(te)[i,k] * X(te)[j,k]
-		end
-		@inbounds K[i,j] = exp( -constant * K[i,j] / 2)
-	end
+    K = kernel(te)
 
 	nthreads::Int64 = Threads.nthreads()
 	work_ranges = partition_work(no_triplets(te), nthreads)
@@ -102,7 +110,7 @@ function gradient(te::STE)
 	∇Cs = [zeros(Float64, no_items(te), dimensions(te)) for _ = 1:nthreads]
 
 	Threads.@threads for tid in 1:nthreads
-		Cs[tid] = gradient_kernel(te, K, ∇Cs[tid], constant, work_ranges[tid])
+		Cs[tid] = gradient_kernel(te, K, ∇Cs[tid], work_ranges[tid])
 	end
 
 	C += sum(Cs)
@@ -112,39 +120,34 @@ function gradient(te::STE)
 		∇C .+= ∇Cs[i]
 	end
 
-    for i in 1:dimensions(te), n in 1:no_items(te)
-		@inbounds ∇C[n,i] = - ∇C[n, i]
-	end
-
-	return C, ∇C
+	return C, -∇C
 end
 
 function gradient_kernel(te::STE,
                         K::Array{Float64,2},
                         ∇C::Array{Float64,2},
-                        constant::Float64,
                         triplets_range::UnitRange{Int64})
 
     C::Float64 = 0.0
     
     for t in triplets_range
-        @inbounds triplets_A = triplets(te)[t, 1]
-        @inbounds triplets_B = triplets(te)[t, 2]
-        @inbounds triplets_C = triplets(te)[t, 3]
+        @inbounds i = triplets(te)[t,1]
+        @inbounds j = triplets(te)[t,2]
+        @inbounds k = triplets(te)[t,3]
 
 		# Compute log probability for each triplet
-        # This is exactly p_{ijk}, which is the equation in the lower-left of page 3 of the t-STE paper.
-        @inbounds P = K[triplets_A, triplets_B] / (K[triplets_A, triplets_B] + K[triplets_A, triplets_C])
+        # This is exactly p_{ijk}, which is the equation in the lower-left of page 3 of the STE paper.
+        @inbounds P = K[i,j] / (K[i,j] + K[i,k])
         C += -log(P)
 
-        for i in 1:dimensions(te)
+        for d in 1:dimensions(te)
             # Calculate the gradient of *this triplet* on its points.
-            @inbounds A_to_B = (1 - P) * (X(te)[triplets_A, i] - X(te)[triplets_B, i])
-            @inbounds A_to_C = (1 - P) * (X(te)[triplets_A, i] - X(te)[triplets_C, i])
+            @inbounds dx_j = (1 - P) * (X(te)[i,d] - X(te)[j,d])
+            @inbounds dx_k = (1 - P) * (X(te)[i,d] - X(te)[k,d])
 
-            @inbounds ∇C[triplets_A, i] += - constant * (A_to_B - A_to_C)
-            @inbounds ∇C[triplets_B, i] +=   constant *  A_to_B
-            @inbounds ∇C[triplets_C, i] += - constant *  A_to_C
+            @inbounds ∇C[i, d] += - te.constant * (dx_j - dx_k)
+            @inbounds ∇C[j, d] +=   te.constant *  dx_j
+            @inbounds ∇C[k, d] += - te.constant *  dx_k
         end
     end
     return C
