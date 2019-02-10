@@ -1,5 +1,5 @@
 struct GNMDS <: TripletEmbedding
-    loss::String
+    loss::Symbol
     triplets::Array{Int64,2}
     dimensions::Int64
     X::Embedding
@@ -25,7 +25,7 @@ struct GNMDS <: TripletEmbedding
     embedding.
     """
     function GNMDS(
-        loss::String,
+        loss::Symbol,
         triplets::Array{Int64,2},
         dimensions::Int64)
 
@@ -47,7 +47,7 @@ struct GNMDS <: TripletEmbedding
     Constructor that takes an initial condition.
     """
     function GNMDS(
-        loss::String,
+        loss::Symbol,
         triplets::Array{Int64,2},
         X::Embedding)
 
@@ -100,6 +100,10 @@ function gradient(te::GNMDS)
     slack = hinge_kernel(te, D)
     C = sum(slack)
 
+    # We use single thread here since it is faster than
+    # multithreading in Julia v1.0.3
+    # We leave the multithreaded version of gradient_kernel
+    # for the future
     ∇C = gradient_kernel(te, slack)
 
     return C, ∇C
@@ -115,6 +119,7 @@ function gradient_kernel(te::GNMDS,
 
     for t in eachindex(violations)
         if violations[t]
+            # We obtain the indices for readability
             @inbounds i = triplets(te)[t,1]
             @inbounds j = triplets(te)[t,2]
             @inbounds k = triplets(te)[t,3]
@@ -133,3 +138,27 @@ function gradient_kernel(te::GNMDS,
     return ∇C
 end
 
+function gradient_kernel!(te::GNMDS,
+                         violations::Array{Bool,1},
+                         ∇C::Array{Float64,2},
+                         triplets_range::UnitRange{Int64})
+    
+    for t in triplets_range
+        if violations[t]
+            @inbounds i = triplets(te)[t,1]
+            @inbounds j = triplets(te)[t,2]
+            @inbounds k = triplets(te)[t,3]
+
+            for d in 1:dimensions(te)
+                @inbounds dx_j = X(te)[i,d] - X(te)[j,d]
+                @inbounds dx_k = X(te)[i,d] - X(te)[k,d]
+                
+                @inbounds ∇C[i,d] +=   2 * (dx_j - dx_k)
+                @inbounds ∇C[j,d] += - 2 * dx_j
+                @inbounds ∇C[k,d] +=   2 * dx_k
+            end
+        end
+    end
+
+    return ∇C
+end
