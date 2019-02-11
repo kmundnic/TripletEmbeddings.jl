@@ -1,6 +1,6 @@
 abstract type AbstractGNMDS <: TripletEmbedding end
 
-losses = [:hinge, :smooth_hinge, :log, :exp]
+losses = [:Hinge, :SmoothHinge, :Log, :Exp]
 
 # We use metaprogramming to generated different possible
 # structs (each for a different possible loss function).
@@ -8,14 +8,14 @@ losses = [:hinge, :smooth_hinge, :log, :exp]
 # but each gradient will be called using multiple dispatch.
 for symbol in losses
         
-    @eval struct $(Symbol(string("GNMDS_", symbol))) <: AbstractGNMDS
+    @eval struct $(Symbol(string(symbol, "GNMDS"))) <: AbstractGNMDS
             triplets::Array{Int64,2}
             dimensions::Int64
             X::Embedding
             no_triplets::Int64
             no_items::Int64
 
-            function $(Symbol(string("GNMDS_", symbol)))(
+            function $(Symbol(string(symbol, "GNMDS")))(
                 loss::String,
                 triplets::Array{Int64,2},
                 dimensions::Int64,
@@ -33,7 +33,7 @@ for symbol in losses
             Constructor that initializes with a random (normal)
             embedding.
             """
-            function $(Symbol(string("GNMDS_", symbol)))(
+            function $(Symbol(string(symbol, "GNMDS")))(
                 triplets::Array{Int64,2},
                 dimensions::Int64)
 
@@ -54,7 +54,7 @@ for symbol in losses
             """
             Constructor that takes an initial condition.
             """
-            function $(Symbol(string("GNMDS_", symbol)))(
+            function $(Symbol(string(symbol, "GNMDS")))(
                 triplets::Array{Int64,2},
                 X::Embedding)
 
@@ -69,7 +69,7 @@ for symbol in losses
         end
 end
 
-function kernel(te::GNMDS_hinge, D::Array{Float64,2})
+function kernel(te::HingeGNMDS, D::Array{Float64,2})
 
     slack = zeros(no_triplets(te))
     
@@ -83,7 +83,7 @@ function kernel(te::GNMDS_hinge, D::Array{Float64,2})
     return Dict(:slack => slack)
 end
 
-function kernel(te::GNMDS_smooth_hinge, D::Array{Float64,2})
+function kernel(te::SmoothHingeGNMDS, D::Array{Float64,2})
     
     weights = zeros(no_triplets(te))
     slack = zeros(no_triplets(te))
@@ -102,7 +102,7 @@ function kernel(te::GNMDS_smooth_hinge, D::Array{Float64,2})
 end
 
 
-function kernel(te::GNMDS_log, D::Array{Float64,2})
+function kernel(te::LogGNMDS, D::Array{Float64,2})
     
     weights = zeros(no_triplets(te))
     slack = zeros(no_triplets(te))
@@ -120,7 +120,7 @@ function kernel(te::GNMDS_log, D::Array{Float64,2})
     return Dict(:slack => slack, :weights => weights)
 end
 
-function kernel(te::GNMDS_exp, D::Array{Float64,2})
+function kernel(te::ExpGNMDS, D::Array{Float64,2})
     
     slack = zeros(no_triplets(te))
 
@@ -197,7 +197,7 @@ function gradient_kernel!(te::AbstractGNMDS,
     return ∇C
 end
 
-function gradient_kernel(te::GNMDS_hinge,
+function gradient_kernel(te::HingeGNMDS,
                          params::Dict{Symbol,Array{Float64,1}})
     
     violations = zeros(Bool, no_triplets(te))
@@ -225,9 +225,9 @@ function gradient_kernel(te::GNMDS_hinge,
     return ∇C
 end
 
-for symbol in [:smooth_hinge, :log, :exp]
+for symbol in [:SmoothHinge, :Log, :Exp]
     
-    @eval function gradient_kernel(te::$(Symbol(string("GNMDS_", symbol))),
+    @eval function gradient_kernel(te::$(Symbol(string(symbol, "GNMDS"))),
                              params::Dict{Symbol,Array{Float64,1}})
         
         violations = zeros(Bool, no_triplets(te))
