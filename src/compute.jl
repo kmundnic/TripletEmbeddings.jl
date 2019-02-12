@@ -2,6 +2,7 @@ function compute(te::TripletEmbedding;
                     verbose::Bool = true,
                     max_iter::Int64 = 1000,
                     debug::Bool = false)
+    println("Computing embedding of type $(typeof(te))")
 
     @assert max_iter >= 10
 
