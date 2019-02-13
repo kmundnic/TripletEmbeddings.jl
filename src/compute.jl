@@ -61,7 +61,7 @@ function compute(te::TripletEmbedding;
     end
 
     if !verbose
-        _, percent_violations = triplet_violations(te, no_triplets=no_triplets(te), no_items=no_items(te), dimensions=te(dimensions))
+        _, percent_violations = triplet_violations(te)
     end
 
     if debug
