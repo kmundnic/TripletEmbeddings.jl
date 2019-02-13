@@ -339,3 +339,74 @@ function scale(data::Array{Float64,1}, X::Array{Float64,1}, t1::Int64, t2::Int64
 
     return a,b
 end
+
+"""
+Find the best linear transformation (rotation, reflection, and bias)
+to match Y to X.
+"""
+
+function procrustes(X::Array{Float64,2}, Y::Array{Float64,2}; reflect=false)
+
+    @assert size(X) == size(Y) "X and Y must be the same size"
+
+    nrows, ncols   = size(X)
+
+    Xmean = mean(X, 1)
+    Ymean = mean(Y, 1)
+    
+    # Center the columns (mean zero for the columns)
+    V = eye(nrows) - 1/nrows * ones(nrows, nrows)
+    X0 = V * X
+    Y0 = V * Y
+    
+    # Checking that not all points are the same
+    checkX = all([X[i,:] ≈ X[1,:] for i in 1:nrows])
+    checkY = all([Y[i,:] ≈ Y[1,:] for i in 1:nrows])
+
+    if !checkX && !checkY
+        # We compute the Frobenius norm of the column-wise
+        # centered arrays, so that we can scale to unit norm,
+        # so that the Frobenius norm of the arrays is equal 
+        # to 1.0
+        Xnorm = vecnorm(X0)
+        Ynorm = vecnorm(Y0)
+
+        X0 = X0 / Xnorm
+        Y0 = Y0 / Ynorm
+
+        # We find the best rotation matrix R for Y
+        U, Σ, V = svd(X0' * Y0)
+        R = V * U'
+        
+        reflected = det(R) < 0
+        if reflect != reflected
+            # ... then either force a reflection, or undo one.
+            V[:,end] = -V[:,end]
+            Σ[end,end] = -Σ[end,end]
+            R = V * U'
+        end
+        
+        # The minimized unstandardized distance Σ(X0,b*Y0*R) is
+        # ||X0||^2 + b^2*||Y0||^2 - 2*b*trace(R*X0'*Y0)
+        traceR = sum(Σ) # == trace(sqrtm(A'*A)) when reflect is 'best'
+        
+        
+        # The optimum scaling of Y in MSE sense
+        b = traceR * Xnorm / Ynorm
+        
+        # The standardized distance between X and b*Y*R+c.
+        d = 1 - traceR.^2
+
+        Z = Xnorm * traceR * Y0 * R + repmat(Xmean, nrows, 1)
+        
+    # The degenerate cases: X all the same, and Y all the same.
+    elseif checkX
+        d = 0
+        Z = repmat(Xmean, nrows, 1)
+    else # !checkX & checkY
+        d = 1
+        Z = repmat(Xmean, nrows, 1)
+    end
+
+    return Z, d, Xnorm * traceR * R, Xmean, reflected
+end
