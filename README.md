@@ -15,7 +15,7 @@ These implementations are based on based on Laurens Van der Maaten's implementat
 # Usage
 The following code is a usage example:
 
-```
+```julia
 using Random
 using Plots
 include("src/Embeddings.jl")
