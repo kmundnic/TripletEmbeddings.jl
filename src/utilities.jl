@@ -282,10 +282,6 @@ function flip_triplets!(triplets::Array{Int64,2}, amount::Int64)
     end
 end
 
-function scale(data::Array{Int64,1}, te::TripletEmbedding)
-    return scale(data, X(te))
-end
-
 function scale(data::Array{Int64,1}, X::Array{Float64,1})
     # We solve the scaling problem by min || aX - data - b||^2,
     # where (a,b) are the scale and offset parameters
@@ -293,12 +289,16 @@ function scale(data::Array{Int64,1}, X::Array{Float64,1})
 
     a, b = [X -ones(size(X))]\data
 
-    return a*X - b
+    return a*X .- b
 
 end
 
 function scale(data::Array{Float64,1}, te::TripletEmbedding; MSE::Bool=false)
-    return scale(data, X(te); MSE=MSE)
+    if te.dimensions == 1
+        return scale(data, dropdims(X(te); dims=2); MSE=MSE)
+    else
+        error("Cannot scale an embedding with dimensions > 1. Use procrustes instead")
+    end
 end
 
 function scale(data::Array{Float64,1}, X::Array{Float64,1}; MSE::Bool=false)
@@ -309,9 +309,9 @@ function scale(data::Array{Float64,1}, X::Array{Float64,1}; MSE::Bool=false)
     a, b = [X -ones(size(X))]\data
 
     if MSE
-        return a*X - b, norm(a*X - b - data)^2
+        return a*X .- b, norm(a*X .- b .- data)^2
     else
-        return a*X - b
+        return a*X .- b
     end
 end
 
