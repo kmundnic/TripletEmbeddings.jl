@@ -165,6 +165,27 @@ function generate_T(n::Int64)
     return T[shuffle(1:end)]
 end
 
+function subset(triplets::Array{Int64,2}, fraction::Real)
+    @assert !isempty(triplets)
+    
+    n = maximum(triplets)
+    amount = floor(Int64, fraction * n * binomial(n-1, 2))
+    
+    triplets = triplets[shuffle(1:end),:]
+    return triplets[1:amount, :]
+
+end
+
+function subset!(triplets::Array{Int64,2}, number_of_triplets::Real)
+    @assert !isempty(triplets)
+    @assert number_of_triplets > 2.0
+    
+    S = triplets[1:floor(Int64, number_of_triplets), :]
+    triplets = triplets[ceil(Int64, number_of_triplets):end, :]
+
+    return S
+end
+
 function distances(te::TripletEmbedding)
     return distances(X(te), no_items(te))
 end
