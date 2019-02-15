@@ -16,7 +16,6 @@ for symbol in losses
             no_items::Int64
 
             function $(Symbol(string(symbol, "GNMDS")))(
-                loss::String,
                 triplets::Array{Int64,2},
                 dimensions::Int64,
                 X::Embedding)
