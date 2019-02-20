@@ -135,25 +135,6 @@ function kernel(te::ExpGNMDS, D::Array{Float64,2})
     return Dict(:slack => slack, :weights => slack)
 end
 
-function distances(te::AbstractGNMDS)
-    sum_X = zeros(Float64, no_items(te), )
-    D = zeros(Float64, no_items(te), no_items(te))
-
-    # Compute normal density kernel for each point
-    # i,j range over points; k ranges over dimensions
-    for k in 1:dimensions(te), i in 1:no_items(te)
-        @inbounds sum_X[i] += X(te)[i,k] * X(te)[i,k]
-    end
-
-    for j in 1:no_items(te), i in 1:no_items(te)
-        @inbounds D[i,j] = sum_X[i] + sum_X[j]
-        for k in 1:dimensions(te)
-            @inbounds D[i,j] += -2 * X(te)[i,k] * X(te)[j,k]
-        end
-    end
-    return D
-end
-
 function gradient(te::AbstractGNMDS)
 
     D = distances(te)

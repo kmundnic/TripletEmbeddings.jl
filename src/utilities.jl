@@ -187,7 +187,22 @@ function subset!(triplets::Array{Int64,2}, number_of_triplets::Real)
 end
 
 function distances(te::TripletEmbedding)
-    return distances(X(te), no_items(te))
+    sum_X = zeros(Float64, no_items(te), )
+    D = zeros(Float64, no_items(te), no_items(te))
+
+    # Compute normal density kernel for each point
+    # i,j range over points; k ranges over dimensions
+    for k in 1:dimensions(te), i in 1:no_items(te)
+        @inbounds sum_X[i] += X(te)[i,k] * X(te)[i,k]
+    end
+
+    for j in 1:no_items(te), i in 1:no_items(te)
+        @inbounds D[i,j] = sum_X[i] + sum_X[j]
+        for k in 1:dimensions(te)
+            @inbounds D[i,j] += -2 * X(te)[i,k] * X(te)[j,k]
+        end
+    end
+    return D
 end
 
 function distances(X::Array{Float64,1}, no_items::Int64)::Array{Float64,2}
