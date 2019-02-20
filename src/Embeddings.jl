@@ -97,5 +97,6 @@ module Embeddings
     include("tSTE.jl")
     include("STE.jl")
     include("GNMDS.jl")
+    include("CKL.jl")
 
 end # module
