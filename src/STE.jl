@@ -76,20 +76,9 @@ function σ(te::STE)
 end
 
 function kernel(te::STE)
-    sum_X = zeros(Float64, no_items(te), )
-    K = zeros(Float64, no_items(te), no_items(te))
-
-    # Compute normal density kernel for each point
-    # i,j range over points; k ranges over dimensions
-    for k in 1:dimensions(te), i in 1:no_items(te)
-        @inbounds sum_X[i] += X(te)[i,k] * X(te)[i,k]
-    end
+    K = pairwise(SqEuclidean(), X(te), dims=1)
 
     for j in 1:no_items(te), i in 1:no_items(te)
-        @inbounds K[i,j] = sum_X[i] + sum_X[j]
-        for k in 1:dimensions(te)
-            @inbounds K[i,j] += -2 * X(te)[i,k] * X(te)[j,k]
-        end
         @inbounds K[i,j] = exp( -te.constant * K[i,j] / 2)
     end
     return K
