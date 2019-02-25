@@ -168,8 +168,7 @@ end
 function subset(triplets::Array{Int64,2}, fraction::Real)
     @assert !isempty(triplets)
     
-    n = maximum(triplets)
-    amount = floor(Int64, fraction * n * binomial(n-1, 2))
+    amount = floor(Int64, fraction * size(triplets,1))
     
     triplets = triplets[shuffle(1:end),:]
     return triplets[1:amount, :]
