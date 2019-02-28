@@ -1,10 +1,15 @@
 function compute(te::TripletEmbedding;
                     verbose::Bool = true,
                     max_iter::Int64 = 1000,
-                    debug::Bool = false)
+                    debug::Bool = false,
+                    nthreads::Int64 = Threads.nthreads())
     println("Computing embedding of type $(typeof(te))")
 
     @assert max_iter >= 10
+    if nthreads > Threads.nthreads()
+    	nthreads = Threads.nthreads()
+    	@warn "Trying to use more threads than available. Using $nthreads instead."
+    end
 
     C::Float64 = Inf                                  # Cost
     ∇C = zeros(Float64, no_items(te), dimensions(te)) # Gradient
@@ -29,7 +34,7 @@ function compute(te::TripletEmbedding;
         old_C = C
 
         # Calculate gradient descent and cost
-        C, ∇C = gradient(te)
+        C, ∇C = gradient(te; nthreads=nthreads)
 
         # Update the embedding according to the gradient
         te.X.X = X(te) - (η / no_triplets(te) * no_items(te)) * ∇C
