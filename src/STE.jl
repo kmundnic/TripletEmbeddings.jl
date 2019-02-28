@@ -84,13 +84,14 @@ function kernel(te::STE)
     return K
 end
 
-function gradient(te::STE; nthreads::Int64=Threads.nthreads())
+function gradient(te::STE)
 
 	P::Float64 = 0.0
 	C::Float64 = 0.0
 
     K = kernel(te)
 
+	nthreads::Int64 = Threads.nthreads()
 	work_ranges = partition_work(no_triplets(te), nthreads)
 
 	# Define costs and gradient vectors for each thread

@@ -84,7 +84,7 @@ function kernel(te::CKL, D::Array{Float64,2})
     return Dict(:nom => nom, :den => den)
 end
 
-function gradient(te::CKL; nthreads::Int64 = Threads.nthreads())
+function gradient(te::CKL)
 
     P::Float64 = 0.0
     C::Float64 = 0.0
@@ -92,6 +92,7 @@ function gradient(te::CKL; nthreads::Int64 = Threads.nthreads())
     D = distances(te)
     K = kernel(te, D)
 
+    nthreads::Int64 = Threads.nthreads()
     work_ranges = partition_work(no_triplets(te), nthreads)
 
     # Define costs and gradient vectors for each thread
