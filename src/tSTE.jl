@@ -61,7 +61,7 @@ struct tSTE <: TripletEmbedding
 
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
-        dimensions = size(X,2)
+        dimensions = size(X.X,2)
         constant::Float64 = (params[:α] + 1) / params[:α]
 
         @check_embedding_conditions
