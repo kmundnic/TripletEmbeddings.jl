@@ -61,7 +61,7 @@ struct STE <: TripletEmbedding
 
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
-        dimensions = size(X,2)
+        dimensions = size(X.X,2)
         constant = 1/params[:σ]^2
 
         @check_embedding_conditions
