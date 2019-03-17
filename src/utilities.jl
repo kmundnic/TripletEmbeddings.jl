@@ -349,11 +349,11 @@ function procrustes(X::Array{Float64,2}, Y::Array{Float64,2}; reflect=false)
 
     nrows, ncols   = size(X)
 
-    Xmean = mean(X, 1)
-    Ymean = mean(Y, 1)
+    Xmean = mean(X, dims=1)
+    Ymean = mean(Y, dims=1)
     
     # Center the columns (mean zero for the columns)
-    V = eye(nrows) - 1/nrows * ones(nrows, nrows)
+    V = Matrix(I, nrows, nrows) - 1/nrows * ones(nrows, nrows)
     X0 = V * X
     Y0 = V * Y
     
@@ -366,8 +366,8 @@ function procrustes(X::Array{Float64,2}, Y::Array{Float64,2}; reflect=false)
         # centered arrays, so that we can scale to unit norm,
         # so that the Frobenius norm of the arrays is equal 
         # to 1.0
-        Xnorm = vecnorm(X0)
-        Ynorm = vecnorm(Y0)
+        Xnorm = norm(X0)
+        Ynorm = norm(Y0)
 
         X0 = X0 / Xnorm
         Y0 = Y0 / Ynorm
@@ -395,15 +395,15 @@ function procrustes(X::Array{Float64,2}, Y::Array{Float64,2}; reflect=false)
         # The standardized distance between X and b*Y*R+c.
         d = 1 - traceR.^2
 
-        Z = Xnorm * traceR * Y0 * R + repmat(Xmean, nrows, 1)
+        Z = Xnorm * traceR * Y0 * R + repeat(Xmean, nrows, 1)
         
     # The degenerate cases: X all the same, and Y all the same.
     elseif checkX
         d = 0
-        Z = repmat(Xmean, nrows, 1)
+        Z = repeat(Xmean', nrows, 1)
     else # !checkX & checkY
         d = 1
-        Z = repmat(Xmean, nrows, 1)
+        Z = repeat(Xmean', nrows, 1)
     end
 
     return Z, d, Xnorm * traceR * R, Xmean, reflected
