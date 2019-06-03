@@ -13,6 +13,13 @@ This is a Julia 1.0 implementation of Triplet Embeddings. Currently, the followi
 These implementations are based on based on Laurens Van der Maaten's implementation in [MATLAB](https://lvdmaaten.github.io/ste/Stochastic_Triplet_Embedding.html). However, this implementation uses multithreading for the calculation of the gradients, making it the fastest implementation.
 
 # Usage
+To use multiple threads, on the command line, write:
+
+```bash
+export JULIA_NUM_THREADS=n
+```
+where `n` is the number of threads (defaults to 1).
+
 The following code is a usage example:
 
 ```julia
