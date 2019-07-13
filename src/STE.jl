@@ -7,21 +7,21 @@
 end
 
 struct STE <: TripletEmbedding
-	@add_embedding_fields
+    @add_embedding_fields
     constant::Float64
 
-	function STE(
-		triplets::Array{Int64,2},
-		dimensions::Int64,
-		params::Dict{Symbol,Real},
-		X::Embedding)
+    function STE(
+        triplets::Array{Int64,2},
+        dimensions::Int64,
+        params::Dict{Symbol,Real},
+        X::Embedding)
 
-		no_triplets::Int64 = size(triplets,1)
-		no_items::Int64 = maximum(triplets)
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
         constant = 1/params[:σ]^2
 
-		@check_embedding_conditions
-		@check_ste_params
+        @check_embedding_conditions
+        @check_ste_params
 
         new(triplets, dimensions, params, X, no_triplets, no_items, constant)
     end
@@ -86,30 +86,30 @@ end
 
 function gradient(te::STE)
 
-	P::Float64 = 0.0
-	C::Float64 = 0.0
+    P::Float64 = 0.0
+    C::Float64 = 0.0
 
     K = kernel(te)
 
-	nthreads::Int64 = Threads.nthreads()
-	work_ranges = partition_work(no_triplets(te), nthreads)
+    nthreads::Int64 = Threads.nthreads()
+    work_ranges = partition_work(no_triplets(te), nthreads)
 
-	# Define costs and gradient vectors for each thread
-	Cs = zeros(Float64, nthreads, )
-	∇Cs = [zeros(Float64, no_items(te), dimensions(te)) for _ = 1:nthreads]
+    # Define costs and gradient vectors for each thread
+    Cs = zeros(Float64, nthreads, )
+    ∇Cs = [zeros(Float64, no_items(te), dimensions(te)) for _ = 1:nthreads]
 
-	Threads.@threads for tid in 1:nthreads
-		Cs[tid] = gradient_kernel(te, K, ∇Cs[tid], work_ranges[tid])
-	end
+    Threads.@threads for tid in 1:nthreads
+        Cs[tid] = gradient_kernel(te, K, ∇Cs[tid], work_ranges[tid])
+    end
 
-	C += sum(Cs)
+    C += sum(Cs)
     ∇C = ∇Cs[1]
 
-	for i in 2:length(∇Cs)
-		∇C .+= ∇Cs[i]
-	end
+    for i in 2:length(∇Cs)
+        ∇C .+= ∇Cs[i]
+    end
 
-	return C, -∇C
+    return C, -∇C
 end
 
 function gradient_kernel(te::STE,
@@ -124,7 +124,7 @@ function gradient_kernel(te::STE,
         @inbounds j = triplets(te)[t,2]
         @inbounds k = triplets(te)[t,3]
 
-		# Compute log probability for each triplet
+        # Compute log probability for each triplet
         # This is exactly p_{ijk}, which is the equation in the lower-left of page 3 of the STE paper.
         @inbounds P = K[i,j] / (K[i,j] + K[i,k])
         C += -log(P)

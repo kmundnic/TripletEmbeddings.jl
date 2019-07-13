@@ -7,19 +7,19 @@
 end
 
 struct CKL <: TripletEmbedding
-	@add_embedding_fields
+    @add_embedding_fields
 
-	function CKL(
-		triplets::Array{Int64,2},
-		dimensions::Int64,
-		params::Dict{Symbol,Real},
-		X::Embedding)
+    function CKL(
+        triplets::Array{Int64,2},
+        dimensions::Int64,
+        params::Dict{Symbol,Real},
+        X::Embedding)
 
-		no_triplets::Int64 = size(triplets,1)
-		no_items::Int64 = maximum(triplets)
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
 
-		@check_embedding_conditions
-		@check_ckl_params
+        @check_embedding_conditions
+        @check_ckl_params
 
         new(triplets, dimensions, params, X, no_triplets, no_items)
     end
