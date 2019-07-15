@@ -41,16 +41,16 @@ params = Dict{Symbol,Real}()
 params[:α] = 30 # Degrees of freedom of the t-Student
 
 te = Embeddings.tSTE(triplets, dimensions, params)
-@time violations = Embeddings.compute(te; max_iter=50)
+@time violations = fit!(te; max_iter=50)
 
 params = Dict{Symbol,Real}()
 params[:σ] = 1/sqrt(2) # Normal distribution variance
 
 te = Embeddings.STE(triplets, dimensions, params)
-@time violations = Embeddings.compute(te; max_iter=50)
+@time violations = fit!(te; max_iter=50)
 
 te = Embeddings.HingeGNMDS(triplets, dimensions)
-@time violations = Embeddings.compute(te; max_iter=50)
+@time violations = fit!(te; max_iter=50)
 
 # Obtain the embedding from the struct te and plot it
 plot(Embeddings.X(te))
