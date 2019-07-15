@@ -1,4 +1,4 @@
-function compute(te::TripletEmbedding;
+function fit!(te::TripletEmbedding;
                     verbose::Bool = true,
                     max_iter::Int64 = 1000,
                     debug::Bool = false)

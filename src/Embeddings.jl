@@ -94,7 +94,7 @@ module Embeddings
     end
 
     include("utilities.jl")
-    include("compute.jl")
+    include("fit.jl")
     include("tSTE.jl")
     include("STE.jl")
     include("GNMDS.jl")
