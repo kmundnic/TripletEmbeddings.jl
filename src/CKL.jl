@@ -49,7 +49,7 @@ struct CKL <: TripletEmbedding
     end
 
     """
-    Constructor that takes an initial condition.
+    Constructor that takes an initial condition as an Embedding.
     """
     function CKL(
         triplets::Array{Int64,2},
@@ -59,6 +59,25 @@ struct CKL <: TripletEmbedding
         no_triplets::Int64 = size(triplets,1)
         no_items::Int64 = maximum(triplets)
         dimensions = size(X,2)
+
+        @check_embedding_conditions
+        @check_ckl_params
+
+        new(triplets, dimensions, params, X, no_triplets, no_items)
+    end
+
+    """
+    Constructor that takes an initial condition as an Matrix.
+    """
+    function CKL(
+        triplets::Array{Int64,2},
+        params::Dict{Symbol,Real},
+        X::Matrix{Float64})
+
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
+        dimensions = size(X,2)
+        X = Embedding(X)
 
         @check_embedding_conditions
         @check_ckl_params

@@ -52,7 +52,7 @@ struct tSTE <: TripletEmbedding
     end
 
     """
-    Constructor that takes an initial condition.
+    Constructor that takes an initial condition as an Embedding.
     """
     function tSTE(
         triplets::Array{Int64,2},
@@ -68,6 +68,30 @@ struct tSTE <: TripletEmbedding
         @check_tste_params
 
         new(triplets, dimensions, params, X, no_triplets, no_items, constant)
+    end
+
+    """
+    Constructor that takes an initial condition as a Matrix.
+
+    Vectors are not allowed as initial conditions, please use an Array{Float,2} 
+    of size = (n,1).
+    """
+    function tSTE(
+        triplets::Array{Int64,2},
+        params::Dict{Symbol,Real},
+        X::Matrix{Float64})
+
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
+        dimensions::Int64 = size(X,2)
+        constant::Float64 = (params[:α] + 1) / params[:α]
+        X = Embedding(X)
+
+        @check_embedding_conditions
+        @check_tste_params
+
+        new(triplets, dimensions, params, X, no_triplets, no_items, constant)
+
     end
 end
 

@@ -2,7 +2,7 @@ abstract type AbstractGNMDS <: TripletEmbedding end
 
 losses = [:Hinge, :SmoothHinge, :Log, :Exp]
 
-# We use metaprogramming to generated different possible
+# We use metaprogramming to generate different possible
 # structs (each for a different possible loss function).
 # Then, we can call the gradient for the type AbstractGNMDS,
 # but each gradient will be called using multiple dispatch.
@@ -64,6 +64,28 @@ for symbol in losses
                 @check_embedding_conditions
 
                 new(triplets, dimensions, X, no_triplets, no_items)
+            end
+
+            """
+            Constructor that takes an initial condition as an Array.
+            
+            Vectors are not allowed as initial conditions, please use an Array{Float,2} 
+            of size = (n,1).
+            """
+            function $(Symbol(string(symbol, "GNMDS")))(
+                triplets::Array{Int64,2},
+                params::Dict{Symbol,Real},
+                X::Matrix{Float64})
+
+                no_triplets::Int64 = size(triplets,1)
+                no_items::Int64 = maximum(triplets)
+                dimensions = size(X,2)
+                X = Embedding(X)
+
+                @check_embedding_conditions
+
+                new(triplets, dimensions, X, no_triplets, no_items)
+
             end
         end
 end

@@ -52,7 +52,7 @@ struct STE <: TripletEmbedding
     end
 
     """
-    Constructor that takes an initial condition.
+    Constructor that takes an initial condition as Embedding.
     """
     function STE(
         triplets::Array{Int64,2},
@@ -69,6 +69,31 @@ struct STE <: TripletEmbedding
 
         new(triplets, dimensions, params, X, no_triplets, no_items, constant)
     end
+
+    """
+    Constructor that takes an initial condition as an Array.
+    
+    Vectors are not allowed as initial conditions, please use an Array{Float,2} 
+    of size = (n,1).
+    """
+    function STE(
+        triplets::Array{Int64,2},
+        params::Dict{Symbol,Real},
+        X::Matrix{Float64})
+
+        no_triplets::Int64 = size(triplets,1)
+        no_items::Int64 = maximum(triplets)
+        dimensions::Int64 = size(X,2)
+        constant = 1/params[:σ]^2
+        X = Embedding(X)
+
+        @check_embedding_conditions
+        @check_ste_params
+
+        new(triplets, dimensions, params, X, no_triplets, no_items, constant)
+
+    end
+
 end
 
 function σ(te::STE)
