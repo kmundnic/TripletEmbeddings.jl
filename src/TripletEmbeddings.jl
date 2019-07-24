@@ -1,4 +1,4 @@
-module Embeddings
+module TripletEmbeddings
 
     using Printf
     using Random
@@ -94,6 +94,7 @@ module Embeddings
     end
 
     include("utilities.jl")
+    include("procrustes.jl")
     include("fit.jl")
     include("tSTE.jl")
     include("STE.jl")
