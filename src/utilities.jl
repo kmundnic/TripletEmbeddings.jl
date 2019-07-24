@@ -1,14 +1,7 @@
 # include("ndgrid.jl")
 
-function load_data(;path::String = "../data/gt_objective.csv", slice::Int64=30)::Array{Float64,1}
-    
-    data = dropdims(readdlm(path); dims=2)
-    
-    if slice < size(data, 1)
-        data = data[1:slice:end] # downsampling
-    end
-
-    return data
+function load_data()::Vector{Float64}
+    return rand(300, )
 end
 
 function createtoydata(n1::Int64, n2::Int64)
