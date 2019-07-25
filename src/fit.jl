@@ -2,7 +2,9 @@ function fit!(te::TripletEmbedding;
                     verbose::Bool = true,
                     max_iter::Int64 = 1000,
                     debug::Bool = false)
-    println("Computing embedding of type $(typeof(te))")
+    if verbose
+        println("Computing embedding of type $(typeof(te))")
+    end
 
     @assert max_iter >= 10
 
