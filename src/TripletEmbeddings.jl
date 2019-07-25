@@ -8,6 +8,8 @@ module TripletEmbeddings
     using DelimitedFiles
     using Base.Threads
 
+    export fit!, STE, tSTE
+
     abstract type TripletEmbedding end
     
     """
