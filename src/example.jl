@@ -1,44 +1,23 @@
+using Plots
 using Random
-using Plots; plotlyjs()
-using BenchmarkTools
-include("Embeddings.jl")
+using TripletEmbeddings # see instructions above
 
 Random.seed!(4)
 
 # Load data dummy data
-data = Embeddings.load_data()
+data = TripletEmbeddings.load_data()
 
 # Generate triplets
-triplets = Embeddings.label(data)
+triplets = TripletEmbeddings.label(data)
 
-# Calculate embedding from triplets
+# Create an embedding with the triplets and compute the embedding
 dimensions = 1
-params = Dict{Symbol,Real}()
-params[:α] = 30 # Degrees of freedom of the t-Student
+params = Dict{Symbol, Real}()
+params[:σ] = 1/sqrt(2) # Normal distribution variance
 
-te = Embeddings.tSTE(triplets, dimensions, params)
+te = TripletEmbeddings.STE(triplets, dimensions, params)
+@time violations = TripletEmbeddings.fit!(te; max_iter=50, verbose=true)
 
-# # Compute embeddings
-# @time violations = Embeddings.fit!(te; max_iter=50)
-
-# X = Embeddings.scale(data, dropdims(te.X.X, dims=2))
-# plot(data, label="Data")
-# plot!(X, label="tSTE")
-# # plot!(data)
-
-# dimensions = 1
-# params = Dict{Symbol,Real}()
-# params[:σ] = 1/sqrt(2) # Normal distribution variance
-
-# te = Embeddings.STE(triplets, dimensions, params)
-
-# # Compute embeddings
-# @time violations = Embeddings.fit!(te; max_iter=50)
-
-# X = Embeddings.scale(data, dropdims(te.X.X, dims=2))
-# plot!(X, label="STE")
-
-# dimensions = 1
-# te = Embeddings.SmoothHingeGNMDS(triplets, dimensions)
-@time violations = Embeddings.fit!(te; max_iter=50)
-# plot(Embeddings.X(te))
+TripletEmbeddings.scale!(data, te)
+plot(data, label="Data")
+plot!(TripletEmbeddings.X(te), label="Embedding") # Can also use te.X.X to access the embedding

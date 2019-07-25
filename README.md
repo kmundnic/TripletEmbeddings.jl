@@ -13,7 +13,21 @@ This is a Julia 1.0 implementation of Triplet Embeddings. Currently, the followi
 These implementations are based on based on Laurens Van der Maaten's implementation in [MATLAB](https://lvdmaaten.github.io/ste/Stochastic_Triplet_Embedding.html). However, this implementation uses multithreading for the calculation of the gradients, making it the fastest implementation.
 
 # Usage
-To use multiple threads, on the command line, write:
+
+## Loading the package
+There's two ways to use this package:
+
+  1. Download it into some `path`, and then load in Julia using:
+
+  ```julia
+	include("path/TripletEmbeddings.jl/src/TripletEmbeddings.jl")
+	using .TripletEmbeddings
+  ```
+  
+  2. Download it into some `path`. Add the `path` to `LOAD_PATH` in Julia using `push!(LOAD_PATH, path)`. Then, you can simply use `using TripletEmbeddings`. If you want it added to the path automatically every time you start a Julia session, add `push!(LOAD_PATH, path)` to your `~/.julia/config/startup.jl` file.
+  
+## Using the package
+To use multiple threads, on the command line, write (before opening Julia):
 
 ```bash
 export JULIA_NUM_THREADS=n
@@ -23,35 +37,27 @@ where `n` is the number of threads (defaults to 1).
 The following code is a usage example:
 
 ```julia
-using Random
 using Plots
-include("src/Embeddings.jl")
+using Random
+using TripletEmbeddings # see instructions above
 
 Random.seed!(4)
 
 # Load data dummy data
-data = Embeddings.load_data()
+data = TripletEmbeddings.load_data()
 
 # Generate triplets
-triplets = Embeddings.label(data)
+triplets = TripletEmbeddings.label(data)
 
 # Create an embedding with the triplets and compute the embedding
 dimensions = 1
-params = Dict{Symbol,Real}()
-params[:α] = 30 # Degrees of freedom of the t-Student
-
-te = Embeddings.tSTE(triplets, dimensions, params)
-@time violations = fit!(te; max_iter=50)
-
-params = Dict{Symbol,Real}()
+params = Dict{Symbol, Real}()
 params[:σ] = 1/sqrt(2) # Normal distribution variance
 
-te = Embeddings.STE(triplets, dimensions, params)
-@time violations = fit!(te; max_iter=50)
+te = TripletEmbeddings.STE(triplets, dimensions, params)
+@time violations = TripletEmbeddings.fit!(te; max_iter=50, verbose=true)
 
-te = Embeddings.HingeGNMDS(triplets, dimensions)
-@time violations = fit!(te; max_iter=50)
-
-# Obtain the embedding from the struct te and plot it
-plot(Embeddings.X(te))
+TripletEmbeddings.scale!(data, te)
+plot(data, label="Data")
+plot!(TripletEmbeddings.X(te), label="Embedding") # Can also use te.X.X to access the embedding
 ```
