@@ -6,7 +6,6 @@ module TripletEmbeddings
     using Statistics
     using LinearAlgebra
     using DelimitedFiles
-    using Base.Threads
 
     export fit!, STE, tSTE
 
