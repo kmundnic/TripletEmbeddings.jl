@@ -4,6 +4,7 @@ module TripletEmbeddings
     using Random
     using Distances
     using Statistics
+    using TableReader
     using LinearAlgebra
     using DelimitedFiles
 
