@@ -4,6 +4,10 @@ function load_data()::Vector{Float64}
     return rand(300, )
 end
 
+function load_data(file::String)
+    return readcsv(file, hasheader=false)[1:30:end,:X1]
+end
+
 function createtoydata(n1::Int64, n2::Int64)
     # Create toy data
     x1, y1 = meshgrid(linspace(-5.0, 5.0, n1), linspace(1.0, 6.0, n1))
