@@ -1,5 +1,5 @@
 # Note
-This package has been deprecated. It is needed for the code in https://www.github.com/kmundnic/PRL2019.
+This package has been deprecated.
 
 # TripletEmbeddings.jl
 This is a Julia 1.0 implementation of Triplet Embeddings. Currently, the following algorithms are implemented:
