@@ -31,7 +31,7 @@ that does not include a reflection component, that is, det(transform.R) is
 1.  procrustesX, Y; reflection=:best) computes the best fit procrustes
 solution, which may or may not include a reflection component, :best is
 the default.  procrustes(X, Y, reflection=true) forces the solution to
-include a reflection component, that is, det(transform.R) is -1.
+include a reflection component, that is, det(transform.R) == -1.
 
 Examples:
 
@@ -57,7 +57,7 @@ References:
 
 Adapted from MATLAB's implementation of Procrustes.
 """
-function procrustes(X, Y; reflection::Union{Bool,Symbol}=:best)
+function procrustes(X::Matrix{<:AbstractFloat}, Y::Matrix{<:AbstractFloat}; reflection::Union{Bool,Symbol}=:best)
 
     n, m   = size(X)
     ny, my = size(Y)
