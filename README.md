@@ -1,3 +1,6 @@
+# Note
+This package has been deprecated. It is needed for the code in https://www.github.com/kmundnic/PRL2019.
+
 # TripletEmbeddings.jl
 This is a Julia 1.0 implementation of Triplet Embeddings. Currently, the following algorithms are implemented:
 
@@ -15,16 +18,12 @@ These implementations are based on based on Laurens Van der Maaten's implementat
 # Usage
 
 ## Loading the package
-There's two ways to use this package:
+Install using:
 
-  1. Download it into some `path`, and then load in Julia using:
-
-  ```julia
-	include("path/TripletEmbeddings.jl/src/TripletEmbeddings.jl")
-	using .TripletEmbeddings
-  ```
-  
-  2. Download it into some `path`. Add the `path` to `LOAD_PATH` in Julia using `push!(LOAD_PATH, path)`. Then, you can simply use `using TripletEmbeddings`. If you want it added to the path automatically every time you start a Julia session, add `push!(LOAD_PATH, path)` to your `~/.julia/config/startup.jl` file.
+```julia
+julia> ]
+(v1.0) pkg> add https://github.com/kmundnic/TripletEmbeddings.jl
+```
   
 ## Using the package
 To use multiple threads, on the command line, write (before opening Julia):
